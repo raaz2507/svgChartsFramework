@@ -236,14 +236,22 @@ class LineChart extends CoreSVGChart{
 					animation: {
 						type: "object",
 						schema: {
-							chartTitleAinmation: { type: "object", default: {type: "fade"} },
+							chartTitleAnimation: { type: "object", default: {type: "fade"} },
 							xTitleAnimation: { type: "object", default: {type: "fade"} },
 							xLineAnimation: { type: "object", default: {type: "slide"} },
 							xLineLabel: { type: "object", default: {type: "fade"} },
 							yTitleAnimation: { type: "object", default: {type: "fade"} },
 							yLineAnimation: { type: "object", default: {type: "slide"} },
 							yLineLabel: { type: "object", default: {type: "fade"} },
-							dataLineAnimation: { type: "object", default: { type: "draw", duration: 2000 } },
+							dataLinePointAnimation: {
+													type: "object",
+													default: {},
+													schema: {
+														type: { type: "string", default: "pop" },
+														delay: { type: "string", default: "sync-line" },
+														duration: { type: "number", default: 500 }
+													}
+													},
 							dataLinePointAnimation: {
 														type: "object",
 														schema: {
@@ -263,17 +271,24 @@ class LineChart extends CoreSVGChart{
 			const output = {};
 
 			for (const key in schema) {
+				
 				const rule = schema[key];
 				const value = input[key];
 
+				const isEmpty = value === '' || value === undefined || value === null;
 				// अगर nested object है
 				if (rule.type === "object") {
-					output[key] = validate(rule.schema, value || {});
+					if (isEmpty || typeof value !== "object") {
+						// अगर invalid है तो default use करो
+						output[key] = validate(rule.schema, {});
+					} else {
+						output[key] = validate(rule.schema, value);
+					}
 				}
 
 				// string validation
 				else if (rule.type === "string") {
-					let valid = typeof value === "string" && value.trim() !== "";
+					let valid = !isEmpty && typeof value === "string" && value.trim() !== "";
 
 					// custom validation
 					if (rule.validate && !rule.validate(value)) {
@@ -285,7 +300,7 @@ class LineChart extends CoreSVGChart{
 
 				// array validation
 				else if (rule.type === "array") {
-					output[key] = Array.isArray(value)
+					output[key] = !isEmpty && Array.isArray(value)
 						? value
 						: rule.default;
 				}
@@ -323,15 +338,20 @@ class LineChart extends CoreSVGChart{
 		
 		this.#drawChartDataLine();   // lines + area
 		
-		/* Aniamiton on Elements */ 
-		//this.#addAnimationsInCSS(); //this will add animation code in CSS
-		this.#addDataLineAnimation(); // Line Drawing Animation setup
-		this.#addDataLineFillAnimation();
-		this.#addDataPointCircleAnimation();
-		// this.#addToolTipsAnimation(tooltipText, tooltipBg);
+		
 
 		this.#addBackGroundInSVG();
 		this.#chartElements.chartContainer.append(this.#chartElements.chartSVG);
+
+		/* Aniamiton on Elements */ 
+		requestAnimationFrame(() => {
+			//this.#addAnimationsInCSS(); //this will add animation code in CSS
+			this.#addDataLineAnimation(); // Line Drawing Animation setup
+			this.#addDataLineFillAnimation();
+			this.#addDataPointCircleAnimation();
+			// this.#addToolTipsAnimation(tooltipText, tooltipBg);
+		});
+		
 
 		this.#addEventOnDataPoint();
 	}
@@ -850,10 +870,16 @@ class LineChart extends CoreSVGChart{
 			//console.log(lineEle.getTotalLength());
 			//console.log(lineEle.getAttribute('d'));
 			console.log(lineEle.isConnected); // true होना चाहिए
+			if (!lineEle || !lineEle.isConnected) return; // safety
 
 			const length = lineEle.getTotalLength();
 
 			lineEle.style.strokeDasharray = length;
+
+			// 🧹 Step 1: reset everything
+			lineEle.style.transition = "none";  // ❗ important
+			lineEle.style.strokeDasharray = length;
+			lineEle.style.strokeDashoffset = length;
 			
 			// {
 			// 	//by animation

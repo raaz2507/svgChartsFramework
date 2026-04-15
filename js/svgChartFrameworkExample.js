@@ -112,7 +112,7 @@ function todayChart() {
 		
 		options: {
 				animation :{
-					chartTitleAinmation: '', 
+					chartTitleAnimation: '', 
 					xTitleAnimation: '', xLineAnimation: '', xLineLabel: '', 
 					yTitleAnimation: '', yLineAnimation: '', yLineLabel: '', 
 					dataLineAnimation: { type: "draw", duration: 2000 }, 
